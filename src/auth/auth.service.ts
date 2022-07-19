@@ -1,23 +1,38 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import { SignupDto } from './dtos/signup.dto';
-import { User, UserDocument } from './schemas/user.schema';
+import { UserService } from 'src/user/user.service';
+import { User } from 'src/user/schemas/user.schema';
 import * as bcrypt from 'bcrypt';
-
+import { JwtService } from '@nestjs/jwt';
 @Injectable()
 export class AuthService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    private userService: UserService,
+    private jwtService: JwtService,
+  ) {}
 
   async signup(signupDto: SignupDto): Promise<User> {
-    signupDto.password = await bcrypt.hash(
-      signupDto.password,
-      +process.env.SALT_ROUND,
-    );
-    const newUser = await this.userModel.create(signupDto);
-    return newUser;
+    return this.userService.createUser(signupDto);
   }
-  async getAll(): Promise<User[]> {
-    return await this.userModel.find({}).select({ password: 0 });
+  async validateUser(signinDto): Promise<User> {
+    const { password, ...rest } = signinDto;
+    const user = await this.userService.findUser(rest);
+    if (!user[0]) {
+      return null;
+    }
+    const isMatch = await bcrypt.compare(password, user[0].password);
+    if (!isMatch) {
+      return null;
+    }
+    return user[0];
+  }
+  async signin(user: User) {
+    console.log('test', user);
+    return {
+      access_token: this.jwtService.sign({
+        email: user.email,
+        mobile: user.mobile,
+      }),
+    };
   }
 }

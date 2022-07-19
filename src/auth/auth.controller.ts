@@ -1,15 +1,17 @@
 import {
   Body,
   Controller,
-  Get,
   Post,
+  Request,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import { User } from 'src/user/schemas/user.schema';
 import { AuthService } from './auth.service';
 import { SigninDto } from './dtos/signin.dto';
 import { SignupDto } from './dtos/signup.dto';
-import { User } from './schemas/user.schema';
+import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @Controller('')
 export class AuthController {
@@ -21,13 +23,10 @@ export class AuthController {
     return this.authService.signup(signupDto);
   }
 
-  // @Post('signin')
-  // signin(@Body() signinDto: SigninDto){
-
-  // }
-
-  @Get()
-  getAllUser(): Promise<User[]> {
-    return this.authService.getAll();
+  @Post('signin')
+  @UsePipes(ValidationPipe)
+  @UseGuards(LocalAuthGuard)
+  signin(@Body() signInDto: SigninDto, @Request() req) {
+    return this.authService.signin(req.user);
   }
 }
